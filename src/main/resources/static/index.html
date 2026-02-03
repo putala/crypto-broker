@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Broker UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; border-radius: 15px; color: white; }
+        .form-select, .form-control { border: 1px solid #444; transition: all 0.3s ease; }
+        .form-select:focus, .form-control:focus { background-color: #2a2a2a; color: white; border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25); }
+        .btn-warning { transition: all 0.3s ease; }
+        .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4); }
+        #response { padding: 10px; border-radius: 8px; display: none; }
+    </style>
+</head>
+<body class="container py-5">
+<div class="row justify-content-center">
+    <div class="col-md-6 card p-4 shadow-lg">
+        <h2 class="text-center mb-4 text-warning fw-bold">Nowe Zlecenie Krypto</h2>
+        <form id="orderForm">
+            <div class="mb-3">
+                <label class="form-label">Wybierz kryptowalutę</label>
+                <select id="cryptoId" class="form-select bg-dark text-white" required>
+                    <option value="bitcoin">Bitcoin (BTC)</option>
+                    <option value="ethereum">Ethereum (ETH)</option>
+                    <option value="binancecoin">Binance Coin (BNB)</option>
+                    <option value="solana">Solana (SOL)</option>
+                    <option value="cardano">Cardano (ADA)</option>
+                    <option value="polkadot">Polkadot (DOT)</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Rodzaj operacji</label>
+                <select id="type" class="form-select bg-dark text-white">
+                    <option value="BUY">KUPNO (Buy)</option>
+                    <option value="SELL">SPRZEDAŻ (Sell)</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Cena docelowa (USD)</label>
+                <input type="number" step="0.01" id="targetPrice" class="form-control bg-dark text-white" placeholder="np. 45000" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Wartość transakcji (Ilość)</label>
+                <input type="number" step="0.0001" id="amount" class="form-control bg-dark text-white" placeholder="np. 0.5" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Ważne do (Data i godzina)</label>
+                <input type="datetime-local" id="expiryDate" class="form-control bg-dark text-white" required>
+            </div>
+
+            <button type="submit" class="btn btn-warning w-100 fw-bold py-2 mt-3">Uruchom Proces Transakcyjny</button>
+        </form>
+        <div id="response" class="mt-4 text-center fw-bold"></div>
+    </div>
+</div>
+
+<script>
+    // Ustawienie domyślnej daty na "za godzinę"
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    document.getElementById('expiryDate').value = now.toISOString().slice(0, 16);
+
+    document.getElementById('orderForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const responseDiv = document.getElementById('response');
+
+        const data = {
+            cryptoId: document.getElementById('cryptoId').value, // Przesyła np. "bitcoin"
+            type: document.getElementById('type').value,
+            targetPrice: parseFloat(document.getElementById('targetPrice').value),
+            amount: parseFloat(document.getElementById('amount').value),
+            expiryDate: new Date(document.getElementById('expiryDate').value).toISOString()
+        };
+
+        try {
+            const response = await fetch('/api/orders/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            const resultText = await response.text();
+            responseDiv.style.display = 'block';
+
+            if (response.ok) {
+                responseDiv.className = 'mt-4 text-center fw-bold text-success border border-success p-2';
+                responseDiv.innerText = '✅ ' + resultText;
+            } else {
+                responseDiv.className = 'mt-4 text-center fw-bold text-danger border border-danger p-2';
+                responseDiv.innerText = '❌ Błąd serwera: ' + resultText;
+            }
+        } catch (error) {
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'mt-4 text-center fw-bold text-danger border border-danger p-2';
+            responseDiv.innerText = '❌ Błąd: Brak połączenia z backendem';
+        }
+    };
+</script>
+</body>
+</html>
