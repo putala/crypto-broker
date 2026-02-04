@@ -21,26 +21,25 @@ public class OrderController {
     public String startOrder(@RequestBody OrderRequest request) {
         Map<String, Object> variables = new HashMap<>();
 
-        // 1. Standaryzacja ID kryptowaluty
+        // 1. Standaryzacja ID kryptowaluty (np. "bitcoin")
         String standardizedCryptoId = (request.getCryptoId() != null ? request.getCryptoId() : "bitcoin").toLowerCase();
 
-        // 2. Mapowanie zmiennych zgodnie z ProcessConstants i tabelami DMN
-        variables.put(ProcessConstants.VAR_CRYPTO_ID, standardizedCryptoId);
-        variables.put(ProcessConstants.VAR_TRANSACTION_TYPE, request.getType()); // BUY / SELL
-        variables.put(ProcessConstants.VAR_TARGET_PRICE, request.getTargetPrice());
+        // 2. Mapowanie zmiennych - UŻYWAMY BEZPOŚREDNICH NAZW Z BPMN
+        // To rozwiąże błąd "Expected at least one condition to evaluate to true"
+        variables.put("cryptoId", standardizedCryptoId);
+        variables.put("transactionType", request.getType()); // Musi być "BUY" lub "SELL"
+        variables.put("targetPrice", request.getTargetPrice());
+        variables.put("orderStrategy", request.getOrderStrategy()); // LIMIT / PROGRES / PKC
+        variables.put("clientTier", request.getClientTier() != null ? request.getClientTier() : "None");
+        variables.put("transactionAmount", request.getAmount());
+        variables.put("expiryDate", request.getExpiryDate());
 
-        // KLUCZOWA POPRAWKA: Upewnij się, że ProcessConstants.VAR_AMOUNT to "transactionAmount"
-        // Twoja tabela DMN (image_e06e5b.png) szuka właśnie tej nazwy.
-        variables.put(ProcessConstants.VAR_AMOUNT, request.getAmount());
-
-        // 3. DODANO: Poziom klienta - Tabela ryzyka wymaga tej zmiennej!
-        // Jeśli nie masz jej w OrderRequest, ustawiamy domyślnie "Bronze"
-        variables.put("clientTier", "Bronze");
-
-        variables.put(ProcessConstants.VAR_EXPIRY_DATE, request.getExpiryDate());
+        // Dodatkowo przesyłamy startDate dla logiki progresji
+        variables.put("startDate", request.getStartDate());
 
         System.out.println("Uruchamiam proces dla danych: " + variables);
 
+        // Upewnij się, że ProcessConstants.PROCESS_ID odpowiada ID w Modelerze (np. "crypto-process")
         zeebeClient.newCreateInstanceCommand()
                 .bpmnProcessId(ProcessConstants.PROCESS_ID)
                 .latestVersion()

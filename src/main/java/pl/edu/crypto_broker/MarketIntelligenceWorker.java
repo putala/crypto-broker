@@ -42,11 +42,7 @@ public class MarketIntelligenceWorker {
             System.out.println(">>> Odczyt ceny: $" + price);
             System.out.println(">>> Wyliczony spread: " + String.format("%.2f", marketSpread) + "%");
 
-            // --- MECHANIZM OCHRONY API (THROTTLING) ---
-            // Odczekujemy 3 sekundy, aby "rozsunąć" zapytania w czasie
-            // i uniknąć błędu 429 przy przejściu do Modułu Transakcyjnego
-            System.out.println(">>> STATUS: Stabilizacja sesji API (pauza 10s)...");
-            Thread.sleep(10000);
+            // --- USUNIĘTO MECHANIZM OCHRONY API (Thread.sleep) ---
 
             System.out.println(">>> STATUS: Przekazuję dane do tabeli DMN (Analiza Spreadu)");
             System.out.println("====================================================\n");
@@ -56,9 +52,6 @@ public class MarketIntelligenceWorker {
                     "marketSpread", marketSpread
             );
 
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            return Map.of("price", 0.0, "marketSpread", 5.0);
         } catch (Exception e) {
             System.err.println("!!! BŁĄD ANALIZY: " + e.getMessage());
             System.err.println("!!! STATUS: Wymuszam tryb bezpieczeństwa (Spread 5.0%)");

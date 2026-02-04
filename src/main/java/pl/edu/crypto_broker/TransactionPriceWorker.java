@@ -7,6 +7,7 @@ import io.camunda.zeebe.client.api.worker.JobClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import java.util.Map;
+import java.util.HashMap;
 
 @Component
 public class TransactionPriceWorker {
@@ -14,17 +15,18 @@ public class TransactionPriceWorker {
     private final WebClient webClient = WebClient.create("https://api.coingecko.com/api/v3");
 
     @JobWorker(type = "fetch-crypto-price")
-    public void handle(final JobClient client, final ActivatedJob job, @Variable(name = "cryptoId") String cryptoId) {
+    public void handle(final JobClient client, final ActivatedJob job,
+                       @Variable(name = "cryptoId") String cryptoId,
+                       @Variable(name = "orderStrategy") String strategy,
+                       @Variable(name = "targetPrice") Double targetPrice) {
+
         String searchId = (cryptoId != null) ? cryptoId.toLowerCase() : "bitcoin";
+        Map<String, Object> allVariables = job.getVariablesAsMap();
 
         System.out.println("\n----------------------------------------------------");
-        System.out.println("MODUŁ TRANSAKCYJNY: Pobieranie kursu...");
+        System.out.println("MODUŁ TRANSAKCYJNY: Analiza kursu dla " + searchId.toUpperCase());
 
         try {
-            // 1. OBOWIĄZKOWE OPOŹNIENIE DLA PĘTLI BPMN
-            // Bez tego pętla "Ponowić zlecenie?" zabije każde API
-            Thread.sleep(10000);
-
             Map response = webClient.get()
                     .uri("/simple/price?ids=" + searchId + "&vs_currencies=usd")
                     .retrieve()
@@ -33,30 +35,50 @@ public class TransactionPriceWorker {
 
             if (response != null && response.containsKey(searchId)) {
                 Map data = (Map) response.get(searchId);
-                Double currentPrice = Double.valueOf(data.get("usd").toString());
+                Double marketPrice = Double.valueOf(data.get("usd").toString());
+                Double offeredPrice = (targetPrice != null) ? targetPrice : 0.0;
 
-                System.out.println(">>> Cena pobrana: $" + currentPrice);
+                // LOGIKA PROGRESYWNA - Z WARTOŚCIĄ STAŁĄ W KODZIE
+                if ("PROGRES".equals(strategy)) {
+                    Object stepObj = allVariables.get("priceStep");
+                    Double priceStep;
 
-                // KOŃCZYMY SUKCESEM - tylko gdy mamy realną cenę
+                    // PRÓBA POBRANIA Z CAMUNDY, A JEŚLI BRAK -> PRZYPISANIE 1000.0
+                    if (stepObj instanceof Number) {
+                        priceStep = ((Number) stepObj).doubleValue();
+                        System.out.println(">>> KROK CENOWY (pobrany z Camundy): +$" + priceStep);
+                    } else {
+                        priceStep = 1000.0; // Wartość przypisana na stałe
+                        System.out.println(">>> KROK CENOWY (stały w kodzie): +$" + priceStep);
+                    }
+
+                    offeredPrice = offeredPrice + priceStep;
+                    System.out.println(">>> STRATEGIA: PROGRESYWNA");
+                }
+                else if ("PKC".equals(strategy)) {
+                    offeredPrice = marketPrice;
+                    System.out.println(">>> STRATEGIA: PKC (Rynek)");
+                }
+                else {
+                    System.out.println(">>> STRATEGIA: LIMIT");
+                }
+
+                System.out.println(">>> CENA RYNKOWA:  $" + marketPrice);
+                System.out.println(">>> CENA OFEROWANA: $" + offeredPrice);
+
+                Map<String, Object> outputVars = new HashMap<>();
+                outputVars.put("price", marketPrice);
+                outputVars.put("offeredPrice", offeredPrice);
+
                 client.newCompleteCommand(job.getKey())
-                        .variables(Map.of("price", currentPrice))
+                        .variables(outputVars)
                         .send()
                         .join();
-            } else {
-                throw new RuntimeException("Pusta odpowiedź z API");
             }
 
         } catch (Exception e) {
-            System.err.println("!!! WYKRYTO PROBLEM Z API: " + e.getMessage());
-
-            // 2. REAKCJA NA BŁĄD API (ZGODNIE Z DIAGRAMEM image_fdfdc1.png)
-            // Wysyłamy BPMN Error "Błąd API", który aktywuje przerywane zdarzenie brzegowe (Boundary Event)
-            // Kod błędu musi być taki sam jak w Modelerze (np. "API_ERROR")
-            client.newThrowErrorCommand(job.getKey())
-                    .errorCode("API_ERROR")
-                    .errorMessage("Przekroczono limity CoinGecko lub brak połączenia")
-                    .send()
-                    .join();
+            System.err.println("!!! PROBLEM Z API: " + e.getMessage());
+            throw new RuntimeException("API tymczasowo niedostępne - czekam na retry...");
         }
     }
 }
