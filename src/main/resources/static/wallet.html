@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Crypto Broker - Portfel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: white; font-family: 'Segoe UI', sans-serif; }
+        .wallet-card { background: #1e1e1e; border: 1px solid #333; border-radius: 20px; padding: 40px; }
+        .asset-row { border-bottom: 1px solid #333; padding: 20px 0; transition: all 0.2s; }
+        .asset-row:hover { background: rgba(255,193,7, 0.05); }
+        .nav-header { background: #1a1a1a; padding: 15px; border-bottom: 2px solid #00ff88; margin-bottom: 50px; }
+        .text-warning { color: #ffc107 !important; }
+        .text-success { color: #00ff88 !important; }
+    </style>
+</head>
+<body>
+
+<nav class="nav-header shadow-lg">
+    <div class="container d-flex justify-content-between align-items-center">
+        <h4 class="text-success mb-0 fw-bold">ZASOBY PORTFELA</h4>
+        <a href="index.html" class="btn btn-outline-light fw-bold">POWRÓT DO TERMINALA</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="wallet-card shadow-lg">
+                <div class="text-center mb-5">
+                    <h5 class="text-muted text-uppercase mb-2">Łączna wartość gotówki</h5>
+                    <h1 id="total-usd" class="text-success fw-bold display-4">$0.00</h1>
+                </div>
+
+                <h5 class="text-warning mb-4 border-bottom pb-2">Posiadane Kryptowaluty</h5>
+                <div id="crypto-list">
+                </div>
+
+                <div class="mt-5 pt-4 text-center border-top">
+                    <button class="btn btn-outline-danger btn-sm" onclick="resetWallet()">Resetuj dane portfela</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const symbolsMap = { 'bitcoin': 'BTC', 'ethereum': 'ETH', 'binancecoin': 'BNB', 'solana': 'SOL', 'cardano': 'ADA', 'polkadot': 'DOT' };
+
+    function renderWallet() {
+        const wallet = JSON.parse(localStorage.getItem('crypto_broker_wallet')) || { usd: 100000 };
+        document.getElementById('total-usd').innerText = `$${wallet.usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+        const list = document.getElementById('crypto-list');
+        list.innerHTML = '';
+
+        let hasCrypto = false;
+        for (const [id, amount] of Object.entries(wallet)) {
+            if (id !== 'usd' && amount > 0) {
+                hasCrypto = true;
+                list.innerHTML += `
+                    <div class="asset-row d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fs-4 fw-bold text-warning">${symbolsMap[id] || id.toUpperCase()}</span>
+                            <small class="text-muted d-block text-capitalize">${id}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="fs-4 fw-bold">${amount.toFixed(4)}</span>
+                            <small class="text-muted d-block text-uppercase">jednostek</small>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        if (!hasCrypto) {
+            list.innerHTML = '<div class="text-center py-4 text-muted">Brak aktywów kryptowalutowych</div>';
+        }
+    }
+
+    function resetWallet() {
+        if (confirm("Zresetować portfel do wartości początkowej (1 000 000 USD)?")) {
+            const initial = { usd: 1000000, bitcoin: 0, ethereum: 0, binancecoin: 0, solana: 0, cardano: 0, polkadot: 0 };
+            localStorage.setItem('crypto_broker_wallet', JSON.stringify(initial));
+            renderWallet();
+        }
+    }
+
+    renderWallet();
+</script>
+</body>
+</html>
