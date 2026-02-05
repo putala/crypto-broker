@@ -28,14 +28,22 @@ public class OrderController {
     public ResponseEntity<Map<String, String>> startOrder(@RequestBody OrderRequest request) {
         String tId = UUID.randomUUID().toString();
         Map<String, Object> variables = new HashMap<>();
+
         variables.put("transactionId", tId);
         variables.put("cryptoId", request.getCryptoId().toLowerCase());
-        variables.put("type", request.getType());
+
+        // POPRAWKA 1: Zmiana klucza na "transactionType", aby pasowal do bramki w BPMN
+        variables.put("transactionType", request.getType());
+
         variables.put("targetPrice", request.getTargetPrice());
         variables.put("orderStrategy", request.getOrderStrategy());
         variables.put("amount", request.getAmount());
         variables.put("clientTier", request.getClientTier());
         variables.put("transactionAmount", request.getAmount() * request.getTargetPrice());
+
+        // POPRAWKA 2: Dodanie dat waznosci zlecenia (naprawia blad NULL w Camunda)
+        variables.put("startDate", request.getStartDate());
+        variables.put("expiryDate", request.getExpiryDate());
 
         zeebeClient.newCreateInstanceCommand()
                 .bpmnProcessId("crypto-broker-process-v2")
@@ -55,14 +63,13 @@ public class OrderController {
         return ResponseEntity.ok(Map.of("status", "PENDING"));
     }
 
-    // POPRAWKA: Dynamiczne pobieranie raportu na podstawie ID transakcji
     @GetMapping("/download-pdf/{tId}")
     public ResponseEntity<Resource> downloadPdf(@PathVariable String tId) {
         String fileName = "raport_" + tId + ".pdf";
         File file = new File(fileName);
 
         if (!file.exists()) {
-            System.err.println(">>>> [BŁĄD] Brak pliku raportu dla ID: " + tId);
+            System.err.println(">>>> [BLAD] Brak pliku raportu dla ID: " + tId);
             return ResponseEntity.notFound().build();
         }
 
