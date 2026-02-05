@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -21,47 +22,51 @@ public class OrderController {
     public String startOrder(@RequestBody OrderRequest request) {
         Map<String, Object> variables = new HashMap<>();
 
-        // 1. Standaryzacja ID kryptowaluty (np. "bitcoin")
-        String standardizedCryptoId = (request.getCryptoId() != null ? request.getCryptoId() : "bitcoin").toLowerCase();
+        // 1. Unikalny klucz korelacji - niezbędny do poprawnego działania wiadomości!
+        String tId = UUID.randomUUID().toString();
+        variables.put("transactionId", tId);
 
-        // 2. Mapowanie zmiennych - UŻYWAMY BEZPOŚREDNICH NAZW Z BPMN
-        // To rozwiąże błąd "Expected at least one condition to evaluate to true"
-        variables.put("cryptoId", standardizedCryptoId);
-        variables.put("transactionType", request.getType()); // Musi być "BUY" lub "SELL"
+        // 2. Mapowanie danych z formularza HTML
+        variables.put("cryptoId", request.getCryptoId().toLowerCase());
+        variables.put("type", request.getType()); // BUY / SELL
         variables.put("targetPrice", request.getTargetPrice());
-        variables.put("orderStrategy", request.getOrderStrategy()); // LIMIT / PROGRES / PKC
-        variables.put("clientTier", request.getClientTier() != null ? request.getClientTier() : "None");
+
+        // 3. TO ROZWIĄZUJE PROBLEM BRAMKI: Przekazujemy strategię (PKC/LIMIT/PROGRES)
+        // Camunda teraz zobaczy wartość na bramce XOR
+        variables.put("orderStrategy", request.getOrderStrategy());
+
+        // 4. MAPOWANIE DLA DMN: Tabela (image_c24b80.png) wymaga "transactionAmount" i "clientTier"
         variables.put("transactionAmount", request.getAmount());
+
+        // Ważne: Zmieniamy na DUŻE LITERKI, aby pasowało do Twojego formularza HTML
+        String tier = (request.getClientTier() != null) ? request.getClientTier().toUpperCase() : "BRONZE";
+        variables.put("clientTier", tier);
+
         variables.put("expiryDate", request.getExpiryDate());
 
-        // Dodatkowo przesyłamy startDate dla logiki progresji
-        variables.put("startDate", request.getStartDate());
+        System.out.println(">>> START PROCESU [" + tId + "] Strategia: " + request.getOrderStrategy());
 
-        System.out.println("Uruchamiam proces dla danych: " + variables);
-
-        // Upewnij się, że ProcessConstants.PROCESS_ID odpowiada ID w Modelerze (np. "crypto-process")
         zeebeClient.newCreateInstanceCommand()
-                .bpmnProcessId(ProcessConstants.PROCESS_ID)
+                .bpmnProcessId("crypto-broker-process-v2") // Nazwa z Twojego schematu
                 .latestVersion()
                 .variables(variables)
                 .send()
                 .join();
 
-        return "Zlecenie przyjęte dla " + standardizedCryptoId + "!";
+        return "Zlecenie " + request.getOrderStrategy() + " przyjęte! ID: " + tId;
     }
 
     @PostMapping("/payment-received")
-    public ResponseEntity<String> confirmPayment(@RequestParam String cryptoId) {
-        String correlationKey = cryptoId.toLowerCase();
-
-        System.out.println("Próba korelacji płatności dla klucza: " + correlationKey);
+    public ResponseEntity<String> confirmPayment(@RequestParam String transactionId) {
+        // Używamy transactionId jako klucza korelacji zamiast nazwy krypto
+        System.out.println("Korelacja płatności dla TX: " + transactionId);
 
         zeebeClient.newPublishMessageCommand()
                 .messageName("PaymentReceivedMessage")
-                .correlationKey(correlationKey)
+                .correlationKey(transactionId)
                 .send()
                 .join();
 
-        return ResponseEntity.ok("Wysłano sygnał płatności dla: " + correlationKey);
+        return ResponseEntity.ok("Wysłano sygnał płatności dla: " + transactionId);
     }
 }
