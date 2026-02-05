@@ -31,6 +31,10 @@ public class OrderController {
         variables.put("targetPrice", request.getTargetPrice());
         variables.put("orderStrategy", request.getOrderStrategy());
         variables.put("amount", request.getAmount());
+
+        // KLUCZOWA POPRAWKA:
+        variables.put("clientTier", request.getClientTier());
+
         variables.put("transactionAmount", request.getAmount() * request.getTargetPrice());
 
         zeebeClient.newCreateInstanceCommand()

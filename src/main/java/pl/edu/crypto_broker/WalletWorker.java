@@ -21,17 +21,37 @@ public class WalletWorker {
             @Variable String cryptoId,
             @Variable String type,
             @Variable Double amount,
-            @Variable Double targetPrice) {
+            @Variable Double targetPrice,
+            @Variable String clientTier,
+            @Variable Double commissionRate) {
 
-        System.out.println(">>>> [CAMUNDA] Finał procesu dla: " + transactionId);
+        System.out.println("\n========================================");
+        System.out.println(">>>> [DEBUG] FINALIZACJA TRANSAKCJI");
+        System.out.println("     - ID: " + transactionId);
+        System.out.println("     - Klient (Tier): " + clientTier);
+        System.out.println("     - Stawka DMN: " + (commissionRate != null ? (commissionRate * 100) + "%" : "BŁĄD (null -> 5%)"));
 
-        // Wysyłamy sygnał do kontrolera, który odbierze Frontend
+        double baseValue = amount * targetPrice;
+        double finalRate = (commissionRate != null) ? commissionRate : 0.05;
+        double commissionValue = baseValue * finalRate;
+
+        // Obliczenie finalnego kosztu (BUY dodaje prowizję, SELL odejmuje)
+        double totalCost = ("BUY".equals(type)) ? (baseValue + commissionValue) : (baseValue - commissionValue);
+
+        System.out.println(String.format("     - Wartość bazowa: $%.2f", baseValue));
+        System.out.println(String.format("     - Kwota prowizji: $%.2f", commissionValue));
+        System.out.println(String.format("     - Suma końcowa:   $%.2f", totalCost));
+        System.out.println("========================================\n");
+
         Map<String, Object> result = new HashMap<>();
         result.put("status", "SUCCESS");
         result.put("cryptoId", cryptoId);
         result.put("type", type);
         result.put("amount", amount);
-        result.put("totalCost", amount * targetPrice);
+        result.put("clientTier", clientTier);
+        result.put("commission", commissionValue);
+        result.put("commissionRate", finalRate);
+        result.put("totalCost", totalCost);
 
         OrderController.completedTransactions.put(transactionId, result);
     }

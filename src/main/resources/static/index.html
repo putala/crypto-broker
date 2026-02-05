@@ -120,7 +120,6 @@
     const staticPrices = { 'ethereum': 2267.70, 'binancecoin': 759.94, 'solana': 98.94, 'cardano': 0.297, 'polkadot': 1.52 };
     let currentBtcPrice = 76394.00;
 
-    // Wallet Helper Functions
     function getWallet() {
         const initialWallet = { usd: 1000000, bitcoin: 0, ethereum: 0, binancecoin: 0, solana: 0, cardano: 0, polkadot: 0 };
         return JSON.parse(localStorage.getItem('crypto_broker_wallet')) || initialWallet;
@@ -131,106 +130,73 @@
         document.getElementById('wallet-usd-header').innerText = `$${wallet.usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
     }
 
-    // Market Price Logic
     async function initTickers() {
         try {
             const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd`);
             if (res.ok) { const data = await res.json(); if (data.bitcoin) currentBtcPrice = data.bitcoin.usd; }
-        } catch (err) { console.error("API error, using fallback BTC price."); }
+        } catch (err) { console.error("API error"); }
 
         const container = document.getElementById('ticker-container');
         container.innerHTML = '';
         cryptoList.forEach(id => {
             const price = (id === 'bitcoin') ? currentBtcPrice : staticPrices[id];
-            container.innerHTML += `
-                <div class="ticker-card d-flex justify-content-between align-items-center">
-                    <div><span class="symbol-badge">${symbolsMap[id]}</span></div>
-                    <div class="text-end"><span class="price-text">$${price.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                </div>`;
+            container.innerHTML += `<div class="ticker-card d-flex justify-content-between align-items-center">
+                <div><span class="symbol-badge">${symbolsMap[id]}</span></div>
+                <div class="text-end"><span class="price-text">$${price.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+            </div>`;
         });
         document.getElementById('last-update').innerText = `Ostatnia aktualizacja: ${new Date().toLocaleTimeString()}`;
     }
 
-    // --- LOGIKA PKC: BLOKOWANIE POLA CENY ---
     document.getElementById('orderStrategy').addEventListener('change', function() {
         const priceInput = document.getElementById('targetPrice');
         if (this.value === 'PKC') {
-            priceInput.disabled = true;
-            priceInput.value = "";
-            priceInput.placeholder = "Cena rynkowa (Market)";
-            priceInput.required = false;
+            priceInput.disabled = true; priceInput.value = ""; priceInput.required = false;
         } else {
-            priceInput.disabled = false;
-            priceInput.placeholder = "np. 70000";
-            priceInput.required = true;
+            priceInput.disabled = false; priceInput.required = true;
         }
     });
 
-    // --- FORMULARZ I POLLING ---
     document.getElementById('orderForm').onsubmit = async (e) => {
         e.preventDefault();
-
         const cryptoId = document.getElementById('cryptoId').value;
         const type = document.getElementById('type').value;
         const amount = parseFloat(document.getElementById('amount').value);
         const strategy = document.getElementById('orderStrategy').value;
-        const priceToUse = strategy === 'PKC' ?
-            (cryptoId === 'bitcoin' ? currentBtcPrice : staticPrices[cryptoId]) :
-            parseFloat(document.getElementById('targetPrice').value);
-
-        const payload = {
-            cryptoId, type, orderStrategy: strategy,
-            clientTier: document.getElementById('clientTier').value,
-            targetPrice: priceToUse, amount,
-            startDate: new Date(document.getElementById('startDate').value).toISOString(),
-            expiryDate: new Date(document.getElementById('expiryDate').value).toISOString()
-        };
+        const priceToUse = strategy === 'PKC' ? (cryptoId === 'bitcoin' ? currentBtcPrice : staticPrices[cryptoId]) : parseFloat(document.getElementById('targetPrice').value);
 
         try {
             const response = await fetch('/api/orders/start', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    cryptoId, type, orderStrategy: strategy,
+                    clientTier: document.getElementById('clientTier').value,
+                    targetPrice: priceToUse, amount,
+                    startDate: new Date(document.getElementById('startDate').value).toISOString(),
+                    expiryDate: new Date(document.getElementById('expiryDate').value).toISOString()
+                })
             });
-
             if (response.ok) {
                 const data = await response.json();
-                document.getElementById('response').innerHTML = `
-                    <div class="alert alert-info py-3 shadow-sm">
-                        <div class="spinner-border spinner-border-sm text-info" role="status"></div>
-                        Zlecenie <strong>${data.transactionId}</strong> przyjęte. <br>
-                        <small>Oczekiwanie na finalizację procesu w Camunda...</small>
-                    </div>`;
-
-                // Rozpocznij sprawdzanie statusu co 2 sekundy
+                document.getElementById('response').innerHTML = `<div class="alert alert-info py-3 shadow-sm"><div class="spinner-border spinner-border-sm text-info"></div>Zlecenie <strong>${data.transactionId}</strong> przyjęte. Czekam na finalizację...</div>`;
                 startPolling(data.transactionId);
             }
-        } catch (error) {
-            document.getElementById('response').innerHTML = `<div class="alert alert-danger">Błąd połączenia z serwerem.</div>`;
-        }
+        } catch (error) { document.getElementById('response').innerHTML = `<div class="alert alert-danger">Błąd połączenia.</div>`; }
     };
 
     function startPolling(transactionId) {
         const pollInterval = setInterval(async () => {
-            try {
-                const res = await fetch(`/api/orders/status/${transactionId}`);
-                if (res.ok) {
-                    const result = await res.json();
-
-                    if (result.status === "SUCCESS") {
-                        clearInterval(pollInterval); // Zatrzymujemy polling
-                        applyTransactionToWallet(result);
-                    }
-                }
-            } catch (err) {
-                console.error("Polling error", err);
+            const res = await fetch(`/api/orders/status/${transactionId}`);
+            if (res.ok) {
+                const result = await res.json();
+                if (result.status === "SUCCESS") { clearInterval(pollInterval); applyTransactionToWallet(result); }
             }
         }, 2000);
     }
 
     function applyTransactionToWallet(data) {
         const wallet = getWallet();
-
         if (data.type === 'BUY') {
             wallet.usd -= data.totalCost;
             wallet[data.cryptoId] = (wallet[data.cryptoId] || 0) + data.amount;
@@ -238,22 +204,26 @@
             wallet.usd += data.totalCost;
             wallet[data.cryptoId] = (wallet[data.cryptoId] || 0) - data.amount;
         }
-
         localStorage.setItem('crypto_broker_wallet', JSON.stringify(wallet));
         updateHeader();
 
+        // Ustawienie koloru odznaki w zależności od poziomu
+        let badgeColor = 'bg-secondary';
+        if (data.clientTier === 'VIP') badgeColor = 'bg-warning text-dark';
+        else if (data.clientTier === 'GOLD') badgeColor = 'bg-primary';
+
         document.getElementById('response').innerHTML = `
-            <div class="alert alert-success shadow-lg">
-                🚀 <strong>Sukces!</strong> Camunda sfinalizowała zlecenie.<br>
-                Portfel został zaktualizowany.
+            <div class="alert alert-success shadow-lg text-start">
+                <h5 class="alert-heading fw-bold">✅ Zlecenie sfinalizowane!</h5>
+                <hr>
+                <div class="mb-2">Poziom klienta: <span class="badge ${badgeColor}">${data.clientTier}</span></div>
+                <p class="mb-1">Aktywo: <strong>${data.amount} ${data.cryptoId.toUpperCase()}</strong></p>
+                <p class="mb-1 text-danger">Prowizja (${(data.commissionRate * 100).toFixed(2)}%): -$${data.commission.toFixed(2)}</p>
+                <p class="mb-0 fw-bold border-top pt-2">Łączny koszt: $${data.totalCost.toFixed(2)}</p>
             </div>`;
     }
 
-    // Inicjalizacja strony
-    initTickers();
-    updateHeader();
-
-    // Ustawienie domyślnych dat
+    initTickers(); updateHeader();
     const nowLocal = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
     document.getElementById('startDate').value = nowLocal.toISOString().slice(0, 16);
     document.getElementById('expiryDate').value = new Date(nowLocal.getTime() + 3600000).toISOString().slice(0, 16);
