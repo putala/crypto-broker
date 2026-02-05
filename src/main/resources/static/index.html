@@ -13,6 +13,7 @@
         .price-text { color: #00ff88; font-weight: bold; font-size: 1.2rem; }
         .symbol-badge { color: #ffc107; font-weight: bold; font-size: 1.1rem; }
         .nav-header { background: #1a1a1a; padding: 15px; border-bottom: 2px solid #ffc107; margin-bottom: 30px; }
+        .spinner-border-sm { margin-right: 10px; }
     </style>
 </head>
 <body class="py-0">
@@ -72,7 +73,7 @@
                             <select id="orderStrategy" class="form-select">
                                 <option value="LIMIT" selected>LIMIT</option>
                                 <option value="PROGRES">PROGRES</option>
-                                <option value="PKC">PKC</option>
+                                <option value="PKC">PKC (Po Każdej Cenie)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -119,69 +120,140 @@
     const staticPrices = { 'ethereum': 2267.70, 'binancecoin': 759.94, 'solana': 98.94, 'cardano': 0.297, 'polkadot': 1.52 };
     let currentBtcPrice = 76394.00;
 
-    // Portfel logic
-    const initialWallet = { usd: 100000, bitcoin: 0, ethereum: 0, binancecoin: 0, solana: 0, cardano: 0, polkadot: 0 };
-    function getWallet() { return JSON.parse(localStorage.getItem('crypto_broker_wallet')) || initialWallet; }
-    function saveWallet(wallet) { localStorage.setItem('crypto_broker_wallet', JSON.stringify(wallet)); updateHeader(); }
-    function updateHeader() { document.getElementById('wallet-usd-header').innerText = `$${getWallet().usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`; }
+    // Wallet Helper Functions
+    function getWallet() {
+        const initialWallet = { usd: 1000000, bitcoin: 0, ethereum: 0, binancecoin: 0, solana: 0, cardano: 0, polkadot: 0 };
+        return JSON.parse(localStorage.getItem('crypto_broker_wallet')) || initialWallet;
+    }
 
-    // Market logic
+    function updateHeader() {
+        const wallet = getWallet();
+        document.getElementById('wallet-usd-header').innerText = `$${wallet.usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    }
+
+    // Market Price Logic
     async function initTickers() {
         try {
             const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd`);
             if (res.ok) { const data = await res.json(); if (data.bitcoin) currentBtcPrice = data.bitcoin.usd; }
-        } catch (err) { console.error("API error"); }
+        } catch (err) { console.error("API error, using fallback BTC price."); }
+
         const container = document.getElementById('ticker-container');
         container.innerHTML = '';
         cryptoList.forEach(id => {
             const price = (id === 'bitcoin') ? currentBtcPrice : staticPrices[id];
-            container.innerHTML += `<div class="ticker-card d-flex justify-content-between align-items-center">
-                <div><span class="symbol-badge">${symbolsMap[id]}</span></div>
-                <div class="text-end"><span class="price-text">$${price.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-            </div>`;
+            container.innerHTML += `
+                <div class="ticker-card d-flex justify-content-between align-items-center">
+                    <div><span class="symbol-badge">${symbolsMap[id]}</span></div>
+                    <div class="text-end"><span class="price-text">$${price.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                </div>`;
         });
-        document.getElementById('last-update').innerText = `Pobrano: ${new Date().toLocaleTimeString()}`;
+        document.getElementById('last-update').innerText = `Ostatnia aktualizacja: ${new Date().toLocaleTimeString()}`;
     }
 
-    // PKC UI
+    // --- LOGIKA PKC: BLOKOWANIE POLA CENY ---
     document.getElementById('orderStrategy').addEventListener('change', function() {
-        const isPKC = this.value === 'PKC';
-        document.getElementById('targetPrice').disabled = isPKC;
-        if (isPKC) document.getElementById('targetPrice').required = false;
+        const priceInput = document.getElementById('targetPrice');
+        if (this.value === 'PKC') {
+            priceInput.disabled = true;
+            priceInput.value = "";
+            priceInput.placeholder = "Cena rynkowa (Market)";
+            priceInput.required = false;
+        } else {
+            priceInput.disabled = false;
+            priceInput.placeholder = "np. 70000";
+            priceInput.required = true;
+        }
     });
 
-    // Form Submit
+    // --- FORMULARZ I POLLING ---
     document.getElementById('orderForm').onsubmit = async (e) => {
         e.preventDefault();
-        const wallet = getWallet();
+
         const cryptoId = document.getElementById('cryptoId').value;
         const type = document.getElementById('type').value;
         const amount = parseFloat(document.getElementById('amount').value);
         const strategy = document.getElementById('orderStrategy').value;
-        const priceToUse = strategy === 'PKC' ? (cryptoId === 'bitcoin' ? currentBtcPrice : staticPrices[cryptoId]) : parseFloat(document.getElementById('targetPrice').value);
-        const totalCost = priceToUse * amount;
+        const priceToUse = strategy === 'PKC' ?
+            (cryptoId === 'bitcoin' ? currentBtcPrice : staticPrices[cryptoId]) :
+            parseFloat(document.getElementById('targetPrice').value);
 
-        if (type === 'BUY' && wallet.usd < totalCost) { alert("Niewystarczające środki USD!"); return; }
-        if (type === 'SELL' && wallet[cryptoId] < amount) { alert("Niewystarczająca ilość krypto!"); return; }
+        const payload = {
+            cryptoId, type, orderStrategy: strategy,
+            clientTier: document.getElementById('clientTier').value,
+            targetPrice: priceToUse, amount,
+            startDate: new Date(document.getElementById('startDate').value).toISOString(),
+            expiryDate: new Date(document.getElementById('expiryDate').value).toISOString()
+        };
 
         try {
             const response = await fetch('/api/orders/start', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ cryptoId, type, orderStrategy: strategy, clientTier: document.getElementById('clientTier').value, targetPrice: priceToUse, amount, startDate: new Date(document.getElementById('startDate').value).toISOString(), expiryDate: new Date(document.getElementById('expiryDate').value).toISOString() })
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                if (type === 'BUY') { wallet.usd -= totalCost; wallet[cryptoId] += amount; }
-                else { wallet.usd += totalCost; wallet[cryptoId] -= amount; }
-                saveWallet(wallet);
-                document.getElementById('response').innerHTML = `<div class="p-3 border border-success text-success">✅ Zlecenie procesowane pomyślnie!</div>`;
+                const data = await response.json();
+                document.getElementById('response').innerHTML = `
+                    <div class="alert alert-info py-3 shadow-sm">
+                        <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                        Zlecenie <strong>${data.transactionId}</strong> przyjęte. <br>
+                        <small>Oczekiwanie na finalizację procesu w Camunda...</small>
+                    </div>`;
+
+                // Rozpocznij sprawdzanie statusu co 2 sekundy
+                startPolling(data.transactionId);
             }
-        } catch (error) { document.getElementById('response').innerText = '❌ Błąd serwera'; }
+        } catch (error) {
+            document.getElementById('response').innerHTML = `<div class="alert alert-danger">Błąd połączenia z serwerem.</div>`;
+        }
     };
 
+    function startPolling(transactionId) {
+        const pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/orders/status/${transactionId}`);
+                if (res.ok) {
+                    const result = await res.json();
+
+                    if (result.status === "SUCCESS") {
+                        clearInterval(pollInterval); // Zatrzymujemy polling
+                        applyTransactionToWallet(result);
+                    }
+                }
+            } catch (err) {
+                console.error("Polling error", err);
+            }
+        }, 2000);
+    }
+
+    function applyTransactionToWallet(data) {
+        const wallet = getWallet();
+
+        if (data.type === 'BUY') {
+            wallet.usd -= data.totalCost;
+            wallet[data.cryptoId] = (wallet[data.cryptoId] || 0) + data.amount;
+        } else {
+            wallet.usd += data.totalCost;
+            wallet[data.cryptoId] = (wallet[data.cryptoId] || 0) - data.amount;
+        }
+
+        localStorage.setItem('crypto_broker_wallet', JSON.stringify(wallet));
+        updateHeader();
+
+        document.getElementById('response').innerHTML = `
+            <div class="alert alert-success shadow-lg">
+                🚀 <strong>Sukces!</strong> Camunda sfinalizowała zlecenie.<br>
+                Portfel został zaktualizowany.
+            </div>`;
+    }
+
+    // Inicjalizacja strony
     initTickers();
     updateHeader();
+
+    // Ustawienie domyślnych dat
     const nowLocal = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
     document.getElementById('startDate').value = nowLocal.toISOString().slice(0, 16);
     document.getElementById('expiryDate').value = new Date(nowLocal.getTime() + 3600000).toISOString().slice(0, 16);
