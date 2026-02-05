@@ -20,7 +20,6 @@ public class NowyPdfWorker {
         Map<String, Object> variables = job.getVariablesAsMap();
         String tId = variables.getOrDefault("transactionId", "unknown").toString();
 
-        // POPRAWKA: Unikalna nazwa pliku dla każdej transakcji
         String fileName = "raport_" + tId + ".pdf";
 
         try {
@@ -48,17 +47,26 @@ public class NowyPdfWorker {
             table.setWidthPercentage(100);
             table.setSpacingBefore(10f);
 
-// Wiersze bez polskich znakow (bezpieczniejsze kodowanie)
+            // Wiersze
             addRow(table, "ID Transakcji:", tId);
             addRow(table, "Kryptowaluta:", variables.getOrDefault("cryptoId", "N/A").toString().toUpperCase());
-            addRow(table, "Typ operacji:", variables.getOrDefault("type", "N/A").toString());
-            addRow(table, "Ilosc:", String.format("%.4f", amount)); // Zmieniono z "Ilość"
+
+            // POPRAWKA: Pobieranie transactionType zamiast type
+            addRow(table, "Typ operacji:", variables.getOrDefault("transactionType", "N/A").toString());
+
+            // Opcjonalnie: Dodanie informacji o strategii (PKC/LIMIT)
+            addRow(table, "Rodzaj zlecenia:", variables.getOrDefault("orderStrategy", "N/A").toString());
+
+            addRow(table, "Ilosc:", String.format("%.4f", amount));
             addRow(table, "Cena egzekucji:", String.format("$%.2f", targetPrice));
-            addRow(table, "Wartosc bazowa:", String.format("$%.2f", transactionAmount)); // Zmieniono z "Wartość"
-            addRow(table, "Prowizja (" + (int)(commissionRate * 100) + "%):", String.format("$%.2f", commissionValue));
+            addRow(table, "Wartosc bazowa:", String.format("$%.2f", transactionAmount));
+
+            // POPRAWKA: Wyświetlanie precyzyjnego procentu prowizji (np. 0.5% zamiast 0%)
+            String commissionLabel = String.format("Prowizja (%.1f%%):", commissionRate * 100);
+            addRow(table, commissionLabel, String.format("$%.2f", commissionValue));
 
             Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD);
-            table.addCell(new Phrase("SUMA KONCOWA (USD):", boldFont)); // Zmieniono z "ŁĄCZNY KOSZT"
+            table.addCell(new Phrase("SUMA KONCOWA (USD):", boldFont));
             table.addCell(new Phrase(String.format("$%.2f", totalCost), boldFont));
 
             document.add(table);
@@ -69,9 +77,10 @@ public class NowyPdfWorker {
 
             document.close();
 
-            // Przekazanie danych do kontrolera
+            // Przekazanie danych do kontrolera (musimy dodać status SUCCESS dla frontendu)
             variables.put("commission", commissionValue);
             variables.put("totalCost", totalCost);
+            variables.put("status", "SUCCESS"); // To odblokuje frontend
             OrderController.completedTransactions.put(tId, variables);
 
             client.newCompleteCommand(job.getKey()).send().join();
