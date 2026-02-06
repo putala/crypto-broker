@@ -116,12 +116,16 @@ function applyTransactionToWallet(data, originalId) {
     const totalCost = parseFloat(data.totalCost || data.transactionAmount || 0);
     const commission = parseFloat(data.commission || 0);
 
-    if (data.type === 'BUY') {
+    // POPRAWKA: Pobieramy typ i ID krypto z formularza, jeśli serwer ich nie odesłał
+    const transactionType = data.type || document.getElementById('type').value;
+    const cryptoId = data.cryptoId || document.getElementById('cryptoId').value;
+
+    if (transactionType === 'BUY') {
         wallet.usd -= totalCost;
-        wallet[data.cryptoId] = (wallet[data.cryptoId] || 0) + amount;
+        wallet[cryptoId] = (wallet[cryptoId] || 0) + amount;
     } else {
         wallet.usd += totalCost;
-        wallet[data.cryptoId] = (wallet[data.cryptoId] || 0) - amount;
+        wallet[cryptoId] = (wallet[cryptoId] || 0) - amount;
     }
 
     localStorage.setItem('crypto_broker_wallet', JSON.stringify(wallet));
@@ -131,13 +135,12 @@ function applyTransactionToWallet(data, originalId) {
     if (data.clientTier === 'VIP') badgeColor = 'bg-warning text-dark';
     else if (data.clientTier === 'GOLD') badgeColor = 'bg-primary';
 
-    // ZMIANA: Link teraz kieruje do /api/orders/download-pdf/${tId}
     document.getElementById('response').innerHTML = `
         <div class="alert alert-success shadow-lg text-start">
             <h5 class="alert-heading fw-bold">✅ Zlecenie sfinalizowane!</h5>
             <hr>
             <div class="mb-2">Poziom klienta: <span class="badge ${badgeColor}">${data.clientTier || 'Standard'}</span></div>
-            <p class="mb-1">Aktywo: <strong>${amount} ${(data.cryptoId || '').toUpperCase()}</strong></p>
+            <p class="mb-1">Aktywo: <strong>${amount} ${(cryptoId || '').toUpperCase()}</strong></p>
             <p class="mb-1 text-danger">Prowizja: -$${commission.toFixed(2)}</p>
             <p class="mb-2 fw-bold border-top pt-2">Łączny koszt: $${totalCost.toFixed(2)}</p>
     
