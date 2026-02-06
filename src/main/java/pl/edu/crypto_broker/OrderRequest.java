@@ -6,10 +6,10 @@ import lombok.Data;
 public class OrderRequest {
     private String cryptoId;
     private String type;         // BUY / SELL
-    private String orderStrategy; // DODANO
-    private String clientTier;    // DODANO
+    private String orderStrategy;
+    private String clientTier;
     private Double targetPrice;
     private Double amount;
-    private String startDate; // DODAJ TO POLE
-    private String expiryDate;   // Format ISO 8601
+    private String startDate;
+    private String expiryDate;
 }

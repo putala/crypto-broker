@@ -3,7 +3,6 @@ package pl.edu.crypto_broker;
 public class ProcessConstants {
     public static final String PROCESS_ID = "crypto-broker-process-v2";
 
-    // Nazwy zmiennych procesowych
     public static final String VAR_CRYPTO_ID = "cryptoId";
     public static final String VAR_PRICE = "price";
     public static final String VAR_TARGET_PRICE = "targetPrice";

@@ -32,7 +32,6 @@ public class OrderController {
         variables.put("transactionId", tId);
         variables.put("cryptoId", request.getCryptoId().toLowerCase());
 
-        // POPRAWKA 1: Zmiana klucza na "transactionType", aby pasowal do bramki w BPMN
         variables.put("transactionType", request.getType());
 
         variables.put("targetPrice", request.getTargetPrice());
@@ -41,7 +40,6 @@ public class OrderController {
         variables.put("clientTier", request.getClientTier());
         variables.put("transactionAmount", request.getAmount() * request.getTargetPrice());
 
-        // POPRAWKA 2: Dodanie dat waznosci zlecenia (naprawia blad NULL w Camunda)
         variables.put("startDate", request.getStartDate());
         variables.put("expiryDate", request.getExpiryDate());
 

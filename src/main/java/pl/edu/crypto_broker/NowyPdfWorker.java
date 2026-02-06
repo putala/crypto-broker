@@ -77,10 +77,9 @@ public class NowyPdfWorker {
 
             document.close();
 
-            // Przekazanie danych do kontrolera (musimy dodać status SUCCESS dla frontendu)
             variables.put("commission", commissionValue);
             variables.put("totalCost", totalCost);
-            variables.put("status", "SUCCESS"); // To odblokuje frontend
+            variables.put("status", "SUCCESS");
             OrderController.completedTransactions.put(tId, variables);
 
             client.newCompleteCommand(job.getKey()).send().join();
