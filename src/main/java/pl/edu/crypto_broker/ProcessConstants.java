@@ -10,6 +10,5 @@ public class ProcessConstants {
     public static final String VAR_TRANSACTION_TYPE = "transactionType";
     public static final String VAR_EXPIRY_DATE = "expiryDate";
 
-    // ZOSTAWIAMY TYLKO TĘ LINIĘ (pasuje do DMN):
     public static final String VAR_AMOUNT = "transactionAmount";
 }
