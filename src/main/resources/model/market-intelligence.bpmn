@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="8a3bc75" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <bpmn:process id="market-intelligence" name="market-intelligence" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Zlecenie analizy">
+      <bpmn:outgoing>Flow_09qiouw</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_FetchMarketData" name="Pobierz dane rynkowe">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="fetch-order-book" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_09qiouw</bpmn:incoming>
+      <bpmn:outgoing>Flow_1q2amq8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_09qiouw" sourceRef="StartEvent_1" targetRef="Task_FetchMarketData" />
+    <bpmn:boundaryEvent id="Event_06t6zh0" name="Błąd API" attachedToRef="Task_FetchMarketData">
+      <bpmn:outgoing>Flow_1i80rzn</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_1mzpvaz" errorRef="Error_0thdg3q" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="Event_1ppd7eh" name="Brak analizy">
+      <bpmn:incoming>Flow_1i80rzn</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1i80rzn" sourceRef="Event_06t6zh0" targetRef="Event_1ppd7eh" />
+    <bpmn:businessRuleTask id="Activity_0ub4phy" name="Analiza Spreadu">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="spread-analysis" resultVariable="isMarketStable" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1q2amq8</bpmn:incoming>
+      <bpmn:outgoing>Flow_192261g</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="Flow_1q2amq8" sourceRef="Task_FetchMarketData" targetRef="Activity_0ub4phy" />
+    <bpmn:sequenceFlow id="Flow_192261g" sourceRef="Activity_0ub4phy" targetRef="Event_1a0f15a" />
+    <bpmn:exclusiveGateway id="Gateway_15as1gi" name="Decyzja końcowa">
+      <bpmn:incoming>Flow_157kiln</bpmn:incoming>
+      <bpmn:outgoing>Flow_0lay1wx</bpmn:outgoing>
+      <bpmn:outgoing>Flow_01yl33t</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Event_1jz1gzk" name="Ryzyko zbyt wysokie">
+      <bpmn:incoming>Flow_0lay1wx</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_1klxx1b" errorRef="Error_05ohk6v" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Event_1lu4lfu" name="Analiza zakończona pomyślnie">
+      <bpmn:incoming>Flow_01yl33t</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0lay1wx" name="Nie" sourceRef="Gateway_15as1gi" targetRef="Event_1jz1gzk">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=isMarketStable = "Low"
+</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_01yl33t" name="Tak" sourceRef="Gateway_15as1gi" targetRef="Event_1lu4lfu">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=isMarketStable = "High" or isMarketStable = "Medium"
+
+</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:intermediateCatchEvent id="Event_1a0f15a" name="Timer 10s">
+      <bpmn:incoming>Flow_192261g</bpmn:incoming>
+      <bpmn:outgoing>Flow_157kiln</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1rys6d6">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_157kiln" sourceRef="Event_1a0f15a" targetRef="Gateway_15as1gi" />
+  </bpmn:process>
+  <bpmn:error id="Error_05ohk6v" name="Error_1cgff09" errorCode="RISK_REJECTED" />
+  <bpmn:error id="Error_0thdg3q" name="API_ERROR" errorCode="API_ERROR" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="market-intelligence">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="202" y="100" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="181" y="143" width="79" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_09z5p72" bpmnElement="Task_FetchMarketData">
+        <dc:Bounds x="370" y="78" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1hm6i4m" bpmnElement="Event_1ppd7eh">
+        <dc:Bounds x="402" y="242" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="390" y="285" width="61" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0ub4phy_di" bpmnElement="Activity_0ub4phy">
+        <dc:Bounds x="560" y="78" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_15as1gi_di" bpmnElement="Gateway_15as1gi" isMarkerVisible="true">
+        <dc:Bounds x="835" y="93" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="895" y="111" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1sihv0s_di" bpmnElement="Event_1jz1gzk">
+        <dc:Bounds x="962" y="202" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="950" y="245" width="61" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1lu4lfu_di" bpmnElement="Event_1lu4lfu">
+        <dc:Bounds x="962" y="-8" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="951" y="35" width="58" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_037vx6t" bpmnElement="Event_1a0f15a">
+        <dc:Bounds x="732" y="100" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="726" y="81" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_06t6zh0_di" bpmnElement="Event_06t6zh0">
+        <dc:Bounds x="402" y="140" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="428" y="183" width="43" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_09qiouw_di" bpmnElement="Flow_09qiouw">
+        <di:waypoint x="238" y="118" />
+        <di:waypoint x="370" y="118" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1i80rzn_di" bpmnElement="Flow_1i80rzn">
+        <di:waypoint x="420" y="176" />
+        <di:waypoint x="420" y="242" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1q2amq8_di" bpmnElement="Flow_1q2amq8">
+        <di:waypoint x="470" y="118" />
+        <di:waypoint x="560" y="118" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_192261g_di" bpmnElement="Flow_192261g">
+        <di:waypoint x="660" y="118" />
+        <di:waypoint x="732" y="118" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0lay1wx_di" bpmnElement="Flow_0lay1wx">
+        <di:waypoint x="860" y="143" />
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="962" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="867" y="179" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_01yl33t_di" bpmnElement="Flow_01yl33t">
+        <di:waypoint x="860" y="93" />
+        <di:waypoint x="860" y="10" />
+        <di:waypoint x="962" y="10" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="867" y="49" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_157kiln_di" bpmnElement="Flow_157kiln">
+        <di:waypoint x="768" y="118" />
+        <di:waypoint x="835" y="118" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

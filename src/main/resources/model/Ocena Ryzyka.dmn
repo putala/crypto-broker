@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Decision_1b7h4r4" name="Ocena Ryzyka" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Web Modeler" exporterVersion="467cd46" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <decision id="market-risk-assessment" name="Ocena Ryzyka">
+    <decisionTable id="DecisionTable_0zvt8nn" hitPolicy="FIRST">
+      <input id="Input_1">
+        <inputExpression id="InputExpression_1" typeRef="number">
+          <text>transactionAmount</text>
+        </inputExpression>
+      </input>
+      <input id="InputClause_04lzeri">
+        <inputExpression id="LiteralExpression_0uxy4kr" typeRef="string">
+          <text>clientTier</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" name="riskLevel" typeRef="string" />
+      <rule id="DecisionRule_1vcxs9r">
+        <description>Zaufany klient - zawsze niskie ryzyko</description>
+        <inputEntry id="UnaryTests_16rhpxf">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_18bjwez">
+          <text>"VIP"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1myqczb">
+          <text>"Low"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0ok90b9">
+        <description>Duże ryzyko dla klasy Gold</description>
+        <inputEntry id="UnaryTests_06mtg1y">
+          <text>&gt;50000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_17s3ai6">
+          <text>"GOLD"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_17md8at">
+          <text>"High"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0dtwnyc">
+        <description>Średnie ryzyko dla klasy Gold</description>
+        <inputEntry id="UnaryTests_1ks289d">
+          <text>[20000..50000]</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_09vf57k">
+          <text>"GOLD"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0lmti14">
+          <text>"Medium"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1t5ku9c">
+        <description>Małe ryzyko dla klasy Gold</description>
+        <inputEntry id="UnaryTests_09lo1s6">
+          <text>&lt;20000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1i53ibp">
+          <text>"GOLD"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1jq01tr">
+          <text>"Low"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1art1nh">
+        <description>Duża kwota u nowego klienta</description>
+        <inputEntry id="UnaryTests_1k52ccx">
+          <text>&gt;20000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0xj86b5">
+          <text>"BRONZE"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0850yle">
+          <text>"High"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1kebb7e">
+        <description>Średnia kwota u nowego klienta</description>
+        <inputEntry id="UnaryTests_04xhvpj">
+          <text>[10000..20000]</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0873pdq">
+          <text>"BRONZE"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_151lcpc">
+          <text>"Medium"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1htnqqz">
+        <description>Małe ryzyko u nowego klienta</description>
+        <inputEntry id="UnaryTests_0t3s32a">
+          <text>&lt;10000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0h5e5z1">
+          <text>"BRONZE"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_187fxsp">
+          <text>"Low"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_11o55r8">
+        <description>Duża kwota dla gościa</description>
+        <inputEntry id="UnaryTests_079vsgf">
+          <text>&gt;10000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1s2zmli">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0iy8kwz">
+          <text>"High"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0febbti">
+        <description>Średnia kwota dla gościa</description>
+        <inputEntry id="UnaryTests_0e41cif">
+          <text>[5000..10000]</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1roqxxu">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1h5dokh">
+          <text>"Medium"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0jw51v6">
+        <description>Niska kwota dla gościa</description>
+        <inputEntry id="UnaryTests_0rxxxqm">
+          <text>&lt;5000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0m21vf8">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1779xki">
+          <text>"Low"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape dmnElementRef="market-risk-assessment">
+        <dc:Bounds height="80" width="180" x="160" y="80" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

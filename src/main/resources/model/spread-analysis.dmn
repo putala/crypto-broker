@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0xhp436" name="DRD" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Web Modeler" exporterVersion="8a3bc75" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <decision id="spread-analysis" name="Analiza spread">
+    <decisionTable id="DecisionTable_03s9noo">
+      <input id="Input_1" label="Spread rynkowy">
+        <inputExpression id="InputExpression_1" typeRef="number">
+          <text>marketSpread</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" label="Stabilność rynku" name="isMarketStable" typeRef="string" />
+      <rule id="DecisionRule_0f3drp1">
+        <description>Rynek bardzo stabilny</description>
+        <inputEntry id="UnaryTests_07qcbtm">
+          <text>&lt; 1</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0dryjyf">
+          <text>"High"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0iwfrj8">
+        <description>Rynek śrdno płynny</description>
+        <inputEntry id="UnaryTests_03rv8pg">
+          <text>[1.0..3.0]</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0l62mzq">
+          <text>"Medium"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1a1ulrs">
+        <description>Zbyt wysoki spread (za mała płynność rynku)</description>
+        <inputEntry id="UnaryTests_0466pm1">
+          <text>&gt; 3.0</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1p5f1mn">
+          <text>"Low"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape dmnElementRef="spread-analysis">
+        <dc:Bounds height="80" width="180" x="160" y="80" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

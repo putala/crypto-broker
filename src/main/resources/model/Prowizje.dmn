@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_08nhjvd" name="DRD" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Web Modeler" exporterVersion="50c8b28" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <decision id="CalculateTransactionFee" name="Prowizje">
+    <decisionTable id="DecisionTable_1033tjs" hitPolicy="FIRST">
+      <input id="Input_1" label="Transaction Amount">
+        <inputExpression id="InputExpression_1" typeRef="number">
+          <text>transactionAmount</text>
+        </inputExpression>
+      </input>
+      <input id="InputClause_1qitvr3" label="Client Tier">
+        <inputExpression id="LiteralExpression_1s5sf41" typeRef="string">
+          <text>clientTier</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" label="Commission Rate" name="commissionRate" typeRef="number" />
+      <rule id="DecisionRule_1psfaqp">
+        <description>Duży obrót VIP (0.5%)</description>
+        <inputEntry id="UnaryTests_1iidrgr">
+          <text>&gt;=10000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1kqxvcz">
+          <text>"VIP"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_11s7hxe">
+          <text>0.005</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_08h3xbl">
+        <description>Mały obrót VIP (1%)</description>
+        <inputEntry id="UnaryTests_0ggce0a">
+          <text>&lt;10000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0n7dbpv">
+          <text>"VIP"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0o1xooa">
+          <text>0.01</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_16iurwk">
+        <description>Średni obrót Gold (2%)</description>
+        <inputEntry id="UnaryTests_1i32epc">
+          <text>&gt;=5000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1p3f350">
+          <text>"GOLD"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_139incz">
+          <text>0.02</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_04puwak">
+        <description>Mały obrót Gold (3%)</description>
+        <inputEntry id="UnaryTests_0biuqgx">
+          <text>&lt;5000</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0tcje72">
+          <text>"GOLD"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0sr994i">
+          <text>0.03</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_06scbcp">
+        <description>Standardowa stawka (4%)</description>
+        <inputEntry id="UnaryTests_0bsffz9">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0p4djsv">
+          <text>"BRONZE"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_00ivvy8">
+          <text>0.04</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1u5u31g">
+        <description>Stawka dla (5%)</description>
+        <inputEntry id="UnaryTests_1xvm2jn">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0nui1gj">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1mjwgkj">
+          <text>0.05</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape dmnElementRef="CalculateTransactionFee">
+        <dc:Bounds height="80" width="180" x="160" y="80" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>
